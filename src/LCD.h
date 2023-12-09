@@ -22,6 +22,7 @@ class LCD {
         uint8_t rotation = 0;
 
         uint64_t clock;
+        uint32_t _div;
         void initSPI()  ;
         void write_spi(uint8_t data) ;
         void write_spi(uint8_t *data, size_t len) ;

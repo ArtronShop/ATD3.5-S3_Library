@@ -55,8 +55,8 @@ void LCD::initSPI() {
   spi_dev->ctrl.rd_bit_order = 0;
 
   // Set Clock
-  uint32_t _div = spiFrequencyToClockDiv(this->clock); // 40 MHz
-  spi_dev->clock.val = _div;
+  this->_div = spiFrequencyToClockDiv(this->clock); // 40 MHz
+  spi_dev->clock.val = this->_div;
 
   // Ref : 8.4.6 Access 8-bit I8080/MT6800 LCD in Master Half-Duplex Mode
   // Setup 1 : Add command 0x27
@@ -291,6 +291,8 @@ uint8_t LCD::getRotation() {
 }
 
 void LCD::setWindow(int x_start, int y_start, int x_end, int y_end) {
+  spi_dev->clock.val = this->_div;
+  
   x_start += LCD_OFFSET_X;
   x_end += LCD_OFFSET_X;
   y_start += LCD_OFFSET_Y;
@@ -773,6 +775,7 @@ void LCD::useLVGL() {
 void LCD::loop() {
   static unsigned long timer = 0;
   if ((millis() < timer) || (timer == 0) || ((millis() - timer) >= 5)) {
+    timer = millis();
     lv_timer_handler();
   }
 }
