@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "LCD.h"
 #include "Touch.h"
 
 static const char * TAG = "Touch";
@@ -69,22 +70,25 @@ uint8_t FT6336::read(uint16_t *cx, uint16_t *cy) {
 
 #ifdef USE_LVGL
 static void touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t * data) {
-    FT6336 * touch = (FT6336 *) indev_driver->user_data;
+  FT6336 * touch = (FT6336 *) indev_driver->user_data;
 
-    uint8_t touchPoint = touch->read((uint16_t*)(&data->point.x), (uint16_t*)(&data->point.y));
-    if (touchPoint > 0) {
-        ESP_LOGV(TAG, "X: %d\tY: %d\n", data->point.x, data->point.y);
-    }
-    data->state = touchPoint > 0 ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+  uint8_t touchPoint = touch->read((uint16_t*)(&data->point.x), (uint16_t*)(&data->point.y));
+  if (touchPoint > 0) {
+    ESP_LOGV(TAG, "X: %d, Y: %d", data->point.x, data->point.y);
+  }
+  data->state = touchPoint > 0 ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
 }
 
+lv_indev_t * lvgl_indev = NULL;
+
 void FT6336::useLVGL() {
-    static lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv);
-    indev_drv.type = LV_INDEV_TYPE_POINTER;
-    indev_drv.read_cb = touchpad_read;
-    indev_drv.user_data = this;
-    lv_indev_drv_register(&indev_drv);
+  static lv_indev_drv_t lvgl_indev_drv;
+  lv_indev_drv_init(&lvgl_indev_drv);
+  lvgl_indev_drv.type = LV_INDEV_TYPE_POINTER;
+  lvgl_indev_drv.read_cb = touchpad_read;
+  lvgl_indev_drv.user_data = this;
+  lvgl_indev_drv.feedback_cb = NULL;
+  lvgl_indev = lv_indev_drv_register(&lvgl_indev_drv);
 }
 #endif
 

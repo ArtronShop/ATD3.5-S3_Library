@@ -2,7 +2,7 @@
 #define __TOUCH_H__
 
 #include <stdint.h>
-#include "LCD.h"
+#include "Common.h"
 
 class FT6336 {
     public: 
