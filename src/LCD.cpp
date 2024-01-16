@@ -8,13 +8,6 @@
 #include "soc/dport_reg.h"
 #include "driver/periph_ctrl.h"
 
-#define LCD_SDA_PIN  (11)
-#define LCD_SCK_PIN  (12)
-#define LCD_CS_PIN   (10)
-#define LCD_DC_PIN   (21)
-#define LCD_RST_PIN  (14)
-#define LCD_BL_PIN   (3)
-
 #define LCD_OFFSET_X (0)
 #define LCD_OFFSET_Y (0)
 
@@ -25,9 +18,11 @@ LCD::LCD() {
 volatile spi_dev_t *spi_dev = (volatile spi_dev_t *)(DR_REG_SPI2_BASE);
 
 void LCD::initSPI() {
+  // SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, -1); // SCK, MISO, MOSI, CS
+
   // Data bus
-  pinMatrixOutAttach(LCD_SDA_PIN, FSPID_OUT_IDX, false, false);
-  pinMatrixOutAttach(LCD_SCK_PIN, FSPICLK_OUT_IDX, false, false);
+  pinMatrixOutAttach(SPI_MOSI_PIN, FSPID_OUT_IDX, false, false);
+  pinMatrixOutAttach(SPI_SCK_PIN, FSPICLK_OUT_IDX, false, false);
 
   // Setup SPI
   periph_module_reset(PERIPH_SPI2_MODULE);
@@ -72,7 +67,7 @@ void LCD::initSPI() {
 
   // Setup 3 : Set dataout
   // spi_dev->user.fwrite_oct = 1; // 8-bit data bus (Data)
-  spi_dev->user.usr_mosi = 0; // Enable MOSI
+  // spi_dev->user.usr_mosi = 0; // Enable MOSI
 
   // Config CS delay
   spi_dev->user.cs_setup = 0;
@@ -117,7 +112,7 @@ void LCD::write_spi(uint8_t *buf, size_t len) {
     spi_dev->cmd.usr = 1;
     while (spi_dev->cmd.usr) ;
 
-    spi_dev->user.usr_mosi = 0; // Disable MISO
+    // spi_dev->user.usr_mosi = 0; // Disable MISO
 
     len -= byte_write;
     offset += byte_write;
@@ -206,10 +201,8 @@ void LCD::write_cmd(uint8_t cmd, uint8_t data) {
 
 void LCD::write_cmd(uint8_t cmd, uint8_t *data, int len) {
     digitalWrite(LCD_CS_PIN, LOW);
-    if (cmd) {
-        digitalWrite(LCD_DC_PIN, LOW);
-        write_spi(cmd);
-    }
+    digitalWrite(LCD_DC_PIN, LOW);
+    write_spi(cmd);
     if (data && (len > 0)) {
         digitalWrite(LCD_DC_PIN, HIGH);
         write_spi(data, len);
@@ -350,7 +343,7 @@ void LCD::drawBitmap(int x_start, int y_start, int x_end, int y_end, uint16_t* c
     while (spi_dev->cmd.update);
     spi_dev->cmd.usr = 1;
     while(spi_dev->cmd.usr);
-    spi_dev->user.usr_mosi = 0;
+    // spi_dev->user.usr_mosi = 0;
 
     len -= (write_bit / 8);
   }
@@ -415,7 +408,7 @@ void LCD::fillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
     while (spi_dev->cmd.update);
     spi_dev->cmd.usr = 1;
     while(spi_dev->cmd.usr);
-    spi_dev->user.usr_mosi = 0;
+    // spi_dev->user.usr_mosi = 0;
 
     len -= write_count;
   }
