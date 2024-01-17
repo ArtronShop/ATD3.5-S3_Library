@@ -6,7 +6,10 @@
 #include "FS.h"
 
 static const char * TAG = "Card";
-
+#ifndef SD_CARD_DEBUG
+#undef ESP_LOGV
+#define ESP_LOGV(TAG, V, ...) ;
+#endif
 
 MicroSDCard::MicroSDCard(FSImplPtr impl): SDFS(impl) {}
 
@@ -272,11 +275,9 @@ void lv_img_set_src_from_sd_card(lv_obj_t * obj, const char * path) {
     f.close();
 
     cache_info->dsc.header.always_zero = 0;
-    /* cache_info->dsc.header.w = 48;
-    cache_info->dsc.header.h = 48; */
-    cache_info->dsc.header.w = 0; // auto width after decode
-    cache_info->dsc.header.h = 0; // auto hight after decode
-    cache_info->dsc.header.cf = LV_IMG_CF_RAW_ALPHA;
+    cache_info->dsc.header.w = 0; // Auto width after decode
+    cache_info->dsc.header.h = 0; // Auto hight after decode
+    cache_info->dsc.header.cf = 0; // Auto color format after decode
     cache_info->dsc.data_size = file_size;
     cache_info->dsc.data = buff;
     lv_img_set_src(obj, &cache_info->dsc);
