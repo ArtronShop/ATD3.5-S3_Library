@@ -79,6 +79,14 @@ static void touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t * data) 
   data->state = touchPoint > 0 ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
 }
 
+static void touch_feedback(lv_indev_drv_t *indev_driver, uint8_t event) {
+  extern void beep_inp_feedback(lv_indev_drv_t *indev_driver, uint8_t event) ;
+  beep_inp_feedback(indev_driver, event) ;
+
+  extern void display_inp_feedback(lv_indev_drv_t *indev_driver, uint8_t event) ;
+  display_inp_feedback(indev_driver, event) ;
+}
+
 lv_indev_t * lvgl_indev = NULL;
 
 void FT6336::useLVGL() {
@@ -87,7 +95,7 @@ void FT6336::useLVGL() {
   lvgl_indev_drv.type = LV_INDEV_TYPE_POINTER;
   lvgl_indev_drv.read_cb = touchpad_read;
   lvgl_indev_drv.user_data = this;
-  lvgl_indev_drv.feedback_cb = NULL;
+  lvgl_indev_drv.feedback_cb = touch_feedback;
   lvgl_indev = lv_indev_drv_register(&lvgl_indev_drv);
 }
 #endif

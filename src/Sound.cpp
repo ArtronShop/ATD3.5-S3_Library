@@ -56,16 +56,20 @@ void ATD_Sound::play(const void * data, size_t len) {
 }
 
 #ifdef USE_LVGL
-static void beep_inp_feedback(lv_indev_drv_t *indev_driver, uint8_t event) {
+static bool enable_useLVGL = false;
+
+void beep_inp_feedback(lv_indev_drv_t *indev_driver, uint8_t event) {
+  if (!enable_useLVGL) {
+    return;
+  }
+
   if((event == LV_EVENT_CLICKED) || (event == LV_EVENT_KEY)) {
     Sound.play(beep_sound_wave, sizeof(beep_sound_wave));
   }
 }
 
-extern lv_indev_t * lvgl_indev;
-
 void ATD_Sound::useLVGL() {
-  lvgl_indev->driver->feedback_cb = beep_inp_feedback;
+  enable_useLVGL = true;
 }
 #endif
 

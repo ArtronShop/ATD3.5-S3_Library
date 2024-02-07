@@ -26,6 +26,8 @@ class LCD {
         
         void setWindow(int x_start, int y_start, int x_end, int y_end) ;
 
+        uint16_t auto_sleep_after_sec = 0;
+
     public:
         LCD();
         void begin(uint8_t rotation = 0, uint32_t speed = 40E6) ;
@@ -55,6 +57,9 @@ class LCD {
         void useLVGL() ;
         void loop() ;
 #endif
+
+        void enableAutoSleep(uint32_t timeout_in_sec) ;
+        void disableAutoSleep() ;
 
 };
 

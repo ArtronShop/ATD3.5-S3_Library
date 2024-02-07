@@ -750,6 +750,14 @@ static void disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *c
   lv_disp_flush_ready(disp);
 }
 
+unsigned long last_touch_on_display  = 0;
+
+void display_inp_feedback(lv_indev_drv_t *indev_driver, uint8_t event) {
+  if((event == LV_EVENT_CLICKED) || (event == LV_EVENT_KEY)) {
+    last_touch_on_display = millis();
+  }
+}
+
 void LCD::useLVGL() {
   lv_init();
   lv_disp_draw_buf_init(&draw_buf, buf, NULL, BUFFER_SIZE);
@@ -771,7 +779,34 @@ void LCD::loop() {
     timer = millis();
     lv_timer_handler();
   }
+
+  if (this->auto_sleep_after_sec > 0) {
+    static bool display_enter_to_sleep = false;
+    if ((millis() - last_touch_on_display) > (this->auto_sleep_after_sec * 1000)) {
+      if (!display_enter_to_sleep) {
+        this->off();
+        digitalWrite(LCD_BL_PIN, LOW);
+        display_enter_to_sleep = true;
+      }
+    } else {
+      if (display_enter_to_sleep) {
+        lv_obj_invalidate(lv_scr_act());
+        lv_timer_handler();
+        this->on();
+        digitalWrite(LCD_BL_PIN, HIGH);
+        display_enter_to_sleep = false;
+      }
+    }
+  }
 }
 #endif
+
+void LCD::enableAutoSleep(uint32_t timeout_in_sec) {
+  this->auto_sleep_after_sec = timeout_in_sec;
+}
+
+void LCD::disableAutoSleep() {
+  this->auto_sleep_after_sec = 0;
+}
 
 LCD Display;
