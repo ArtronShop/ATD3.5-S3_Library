@@ -738,6 +738,8 @@ void LCD::fillArrow(uint16_t x0,uint16_t y0,uint16_t x1,uint16_t y1,uint16_t w,u
 }
 
 #ifdef USE_LVGL
+#include "LVGLHelper.h"
+
 #define BUFFER_SIZE (16000) // 16000 color per time
 
 static lv_disp_draw_buf_t draw_buf;
@@ -774,27 +776,51 @@ void LCD::useLVGL() {
 }
 
 void LCD::loop() {
-  static unsigned long timer = 0;
-  if ((millis() < timer) || (timer == 0) || ((millis() - timer) >= 5)) {
-    timer = millis();
-    lv_timer_handler();
+  { // UI update
+    static unsigned long timer = 0;
+    if ((millis() < timer) || (timer == 0) || ((millis() - timer) >= 5)) {
+      timer = millis();
+      lv_timer_handler();
+    }
   }
 
-  if (this->auto_sleep_after_sec > 0) {
+  { // Auto sleep
     static bool display_enter_to_sleep = false;
-    if ((millis() - last_touch_on_display) > (this->auto_sleep_after_sec * 1000)) {
-      if (!display_enter_to_sleep) {
-        this->off();
-        digitalWrite(LCD_BL_PIN, LOW);
-        display_enter_to_sleep = true;
+    if (this->auto_sleep_after_sec > 0) { // enable auto sleep
+      if ((millis() - last_touch_on_display) > (this->auto_sleep_after_sec * 1000)) {
+        if (!display_enter_to_sleep) {
+          this->off();
+          digitalWrite(LCD_BL_PIN, LOW);
+          display_enter_to_sleep = true;
+        }
+      } else {
+        if (display_enter_to_sleep) {
+          lv_obj_invalidate(lv_scr_act());
+          lv_timer_handler();
+          this->on();
+          digitalWrite(LCD_BL_PIN, HIGH);
+          display_enter_to_sleep = false;
+        }
       }
-    } else {
-      if (display_enter_to_sleep) {
+    } else { // disable auto sleep
+      if (display_enter_to_sleep) { // but now in sleep
         lv_obj_invalidate(lv_scr_act());
         lv_timer_handler();
         this->on();
         digitalWrite(LCD_BL_PIN, HIGH);
         display_enter_to_sleep = false;
+      }
+    }
+  }
+
+  if (xSafeUpdateQueue) { // Safe UI update
+    SafeUpdateParam_t safe_update_item;
+    while(xQueueReceive(xSafeUpdateQueue, &safe_update_item, 0) == pdPASS) {
+      if (safe_update_item.cb) {
+        safe_update_item.cb(safe_update_item.user_data);
+      }
+      if (safe_update_item.sync_event_group_handle) {
+        xEventGroupSetBits(safe_update_item.sync_event_group_handle, BIT0);
       }
     }
   }
