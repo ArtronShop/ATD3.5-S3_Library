@@ -212,7 +212,7 @@ void LCD::write_cmd(uint8_t cmd, uint8_t *data, int len) {
 
 void LCD::initST7796S() {
   pinMode(LCD_BL_PIN, OUTPUT);
-  digitalWrite(LCD_BL_PIN, LOW);
+  analogWrite(LCD_BL_PIN, 0);
 
   pinMode(LCD_RST_PIN, OUTPUT);
   digitalWrite(LCD_RST_PIN, LOW);
@@ -247,13 +247,14 @@ void LCD::initST7796S() {
   delay(10);
   write_cmd(ST7796_INVON);
   write_cmd(ST7796_DISPON);
-  digitalWrite(LCD_BL_PIN, HIGH);
+  this->setBrightness(this->brightness);
   delay(200);
 }
 
-void LCD::begin(uint8_t rotation, uint32_t speed) {
+void LCD::begin(uint8_t rotation, uint32_t speed, uint8_t brightness) {
   this->rotation = rotation;
   this->clock = speed;
+  this->brightness = constrain(brightness, 0, 100);
   this->initSPI();
   this->initST7796S();
 }
@@ -281,6 +282,28 @@ void LCD::setRotation(int m) {
 
 uint8_t LCD::getRotation() {
   return this->rotation;
+}
+
+// Display OFF
+void LCD::off() {
+	this->write_cmd(ST7796_SLPIN);	// Display off
+  analogWrite(LCD_BL_PIN, 0);
+}
+ 
+// Display ON
+void LCD::on() {
+	this->write_cmd(ST7796_SLPOUT);	// Display on
+  this->setBrightness(this->brightness);
+}
+
+void LCD::setBrightness(int level) {
+  level = constrain(level, 0, 100);
+  analogWrite(LCD_BL_PIN, map(level, 0, 100, 0, 255));
+  this->brightness = level;
+}
+
+int LCD::getBrightness() {
+  return this->brightness;
 }
 
 void LCD::setWindow(int x_start, int y_start, int x_end, int y_end) {
@@ -414,16 +437,6 @@ void LCD::fillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
   }
   
   digitalWrite(LCD_CS_PIN, HIGH);
-}
-
-// Display OFF
-void LCD::off() {
-	this->write_cmd(ST7796_DISPOFF);	//Display off
-}
- 
-// Display ON
-void LCD::on() {
-	this->write_cmd(ST7796_DISPON);	//Display on
 }
 
 // Fill screen
@@ -785,30 +798,35 @@ void LCD::loop() {
   }
 
   { // Auto sleep
-    static bool display_enter_to_sleep = false;
+    static uint8_t state = 0;
     if (this->auto_sleep_after_sec > 0) { // enable auto sleep
-      if ((millis() - last_touch_on_display) > (this->auto_sleep_after_sec * 1000)) {
-        if (!display_enter_to_sleep) {
-          this->off();
-          digitalWrite(LCD_BL_PIN, LOW);
-          display_enter_to_sleep = true;
+      if (state == 0) {
+        if ((millis() - last_touch_on_display) >= (this->auto_sleep_after_sec / 2 * 1000)) {
+          analogWrite(LCD_BL_PIN, map(this->brightness / 2, 0, 100, 0, 255));
+          state = 1;
         }
-      } else {
-        if (display_enter_to_sleep) {
+      } else if (state == 1) {
+        if ((millis() - last_touch_on_display) >= (this->auto_sleep_after_sec * 1000)) {
+          this->off();
+          state = 2;
+        } else if ((millis() - last_touch_on_display) < (this->auto_sleep_after_sec / 2 * 1000)) {
+          this->setBrightness(this->brightness);
+          state = 0;
+        }
+      } else if (state == 2) {
+        if ((millis() - last_touch_on_display) < (this->auto_sleep_after_sec * 1000)) {
           lv_obj_invalidate(lv_scr_act());
           lv_timer_handler();
           this->on();
-          digitalWrite(LCD_BL_PIN, HIGH);
-          display_enter_to_sleep = false;
+          state = 0;
         }
       }
     } else { // disable auto sleep
-      if (display_enter_to_sleep) { // but now in sleep
+      if (state != 0) { // but now in sleep
         lv_obj_invalidate(lv_scr_act());
         lv_timer_handler();
         this->on();
-        digitalWrite(LCD_BL_PIN, HIGH);
-        display_enter_to_sleep = false;
+        state = 0;
       }
     }
   }
